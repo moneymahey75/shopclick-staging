@@ -422,7 +422,7 @@ const PaymentSettings: React.FC = () => {
                         </div>
                         <div>
                             <label htmlFor="autopool20DirectIncome" className="block text-sm font-medium text-gray-700 mb-2">
-                                AutoPool Direct Parent Income (USDT)
+                                Standard AutoPool Direct Parent Income (USDT)
                             </label>
                             <input
                                 type="number"
@@ -436,7 +436,7 @@ const PaymentSettings: React.FC = () => {
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="2"
                             />
-                            <p className="text-xs text-gray-500 mt-2">Credited to the eligible parent’s working wallet for each completed 20 USDT purchase. Maximum 20 USDT.</p>
+                            <p className="text-xs text-gray-500 mt-2">Used outside an active promotional date range. Configure temporary overrides under Income Offers. Maximum 20 USDT.</p>
                         </div>
 
                         <div>

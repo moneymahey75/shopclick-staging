@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../contexts/AdminContext';
 import { useAuth } from '../contexts/AuthContext';
+import { formatOfferDate, isDirectIncomeOfferActive } from '../utils/directIncomeOffer';
 import { 
   ArrowRight, 
   Users, 
@@ -43,6 +44,7 @@ const getInitials = (name: string) => {
 };
 
 const HOME_AUTOPOOL_POPUP_DISMISSED_KEY = 'home_autopool_popup_dismissed_date';
+const HOME_LAUNCH_POPUP_DISMISSED_KEY = 'home_launch_offer_popup_dismissed_date';
 
 const getLocalDateKey = () => {
   const now = new Date();
@@ -108,6 +110,11 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAutopoolPopup, setShowAutopoolPopup] = useState(false);
+  const [showLaunchPopup, setShowLaunchPopup] = useState(false);
+  const autopoolOffer = settings.directIncomeOfferConfig?.autopool;
+  const launchOffer = settings.directIncomeOfferConfig?.launch;
+  const autopoolOfferActive = isDirectIncomeOfferActive(autopoolOffer);
+  const launchOfferActive = isDirectIncomeOfferActive(launchOffer);
 
   useEffect(() => {
     if (settingsLoading) return;
@@ -125,6 +132,18 @@ const Home: React.FC = () => {
     }
   }, [settings.homeAutopoolPopupEnabled, settingsLoading]);
 
+  useEffect(() => {
+    if (settingsLoading || !launchOfferActive) {
+      setShowLaunchPopup(false);
+      return;
+    }
+    try {
+      setShowLaunchPopup(localStorage.getItem(HOME_LAUNCH_POPUP_DISMISSED_KEY) !== getLocalDateKey());
+    } catch {
+      setShowLaunchPopup(true);
+    }
+  }, [launchOfferActive, settingsLoading]);
+
   const dismissAutopoolPopup = () => {
     try {
       localStorage.setItem(HOME_AUTOPOOL_POPUP_DISMISSED_KEY, getLocalDateKey());
@@ -132,6 +151,15 @@ const Home: React.FC = () => {
       // Continue closing the popup if browser storage is unavailable.
     }
     setShowAutopoolPopup(false);
+  };
+
+  const dismissLaunchPopup = () => {
+    try {
+      localStorage.setItem(HOME_LAUNCH_POPUP_DISMISSED_KEY, getLocalDateKey());
+    } catch {
+      // Continue closing the popup if browser storage is unavailable.
+    }
+    setShowLaunchPopup(false);
   };
 
   const exampleCouponCompanies: PromoCompany[] = [
@@ -273,6 +301,13 @@ const Home: React.FC = () => {
             <p className="mt-4 text-lg leading-relaxed text-emerald-50">
               Join the separate eight-level AutoPool matrix with a one-time 20 USDT subscription.
             </p>
+            {autopoolOfferActive && autopoolOffer && (
+              <div className="mt-5 rounded-2xl border border-amber-300/50 bg-amber-300/15 p-4">
+                <div className="text-xs font-bold uppercase tracking-widest text-amber-300">Limited-time direct income</div>
+                <div className="mt-1 text-3xl font-black text-white">{autopoolOffer.amount} USDT</div>
+                <p className="mt-1 text-sm text-amber-50">Earned by the eligible direct parent for each AutoPool purchase through {formatOfferDate(autopoolOffer.endAt)}.</p>
+              </div>
+            )}
             <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
               {['Separate matrix', 'Top-to-bottom placement', 'Eight levels', 'Add-on eligible'].map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-emerald-50">
@@ -298,6 +333,21 @@ const Home: React.FC = () => {
               </button>
             </div>
             <p className="mt-4 text-center text-xs text-emerald-100/70">This popup will stay hidden for the rest of today after closing.</p>
+          </div>
+        </div>
+      )}
+      {!showAutopoolPopup && showLaunchPopup && launchOfferActive && launchOffer && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="launch-offer-title">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-indigo-300/60 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-8 text-white shadow-2xl">
+            <button type="button" onClick={dismissLaunchPopup} aria-label="Close offer" className="absolute right-4 top-4 rounded-full p-2 text-indigo-100 transition hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-amber-400 px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-slate-950"><Sparkles className="h-4 w-4" /> Launch Plan Offer</div>
+            <h2 id="launch-offer-title" className="text-3xl font-black leading-tight sm:text-4xl">Earn {launchOffer.amount} USDT Direct Income</h2>
+            <p className="mt-4 text-lg leading-relaxed text-indigo-50">During this limited-time offer, an eligible direct sponsor receives a fixed {launchOffer.amount} USDT on each qualifying Launch plan purchase.</p>
+            <div className="mt-5 rounded-2xl bg-white/10 p-4 text-sm text-indigo-50">Valid from {formatOfferDate(launchOffer.startAt)} through {formatOfferDate(launchOffer.endAt)}.</div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link to="/upcoming-plan" onClick={dismissLaunchPopup} className="flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-3 text-center font-extrabold text-slate-950 transition hover:from-amber-300 hover:to-orange-400">View Launch Plan</Link>
+              <button type="button" onClick={dismissLaunchPopup} className="rounded-xl border border-white/30 px-5 py-3 font-semibold text-white transition hover:bg-white/10">Maybe Later</button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../contexts/AdminContext';
+import { formatOfferDate, isDirectIncomeOfferActive } from '../utils/directIncomeOffer';
 import {
   ArrowRight,
   BadgeDollarSign,
@@ -31,6 +32,10 @@ const UpcomingPlan: React.FC = () => {
   }, []);
 
   const afterLaunchConfig = (settings as any)?.afterLaunchPlanConfig || null;
+  const launchOffer = settings.directIncomeOfferConfig?.launch;
+  const autopoolOffer = settings.directIncomeOfferConfig?.autopool;
+  const launchOfferActive = isDirectIncomeOfferActive(launchOffer);
+  const autopoolOfferActive = isDirectIncomeOfferActive(autopoolOffer);
   const rewards = [
     {
       title: 'Team Reward 1',
@@ -289,6 +294,14 @@ const UpcomingPlan: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">2nd Income: Direct Income</h2>
             </div>
 
+            {launchOfferActive && launchOffer && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                <div className="text-xs font-bold uppercase tracking-widest text-amber-700">Limited-time offer</div>
+                <div className="mt-1 text-xl font-extrabold">{launchOffer.amount} USDT fixed first-level direct income</div>
+                <p className="mt-1 text-sm">Applies to qualifying Launch purchases through {formatOfferDate(launchOffer.endAt)}. Normal direct-income rules resume automatically afterward.</p>
+              </div>
+            )}
+
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
               {(effectiveAfterLaunch.directIncome || []).slice(0, 6).map((row: any) => {
                 const percentValue = Number(row?.percent);
@@ -382,6 +395,9 @@ const UpcomingPlan: React.FC = () => {
                   <div>
                     <div className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">New bumper offer</div>
                     <h2 className="mt-1 text-2xl font-extrabold sm:text-3xl">20 USDT Matrix Plan</h2>
+                    {autopoolOfferActive && autopoolOffer && (
+                      <p className="mt-2 text-sm font-semibold text-amber-100">Limited offer: {autopoolOffer.amount} USDT direct-parent income through {formatOfferDate(autopoolOffer.endAt)}</p>
+                    )}
                   </div>
                 </div>
                 <Link

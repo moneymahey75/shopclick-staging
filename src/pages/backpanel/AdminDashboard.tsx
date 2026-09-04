@@ -17,6 +17,7 @@ import CouponManagement from '../../components/admin/CouponManagement';
 import WalletManagement from '../../components/admin/WalletManagement';
 import EarningDistributionSettings from '../../components/admin/EarningDistributionSettings';
 import AfterLaunchPlanSettings from '../../components/admin/AfterLaunchPlanSettings';
+import DirectIncomeOfferSettings from '../../components/admin/DirectIncomeOfferSettings';
 import SpinWheelManagement from '../../components/admin/SpinWheelManagement';
 import MLMLevelCounts from '../../components/admin/MLMLevelCounts';
 import AutopoolAnalytics from '../../components/admin/AutopoolAnalytics';
@@ -365,6 +366,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'contact_footer', label: 'Contact & Footer', icon: Contact, permission: 'settings' },
     { id: 'registration', label: 'Registration Settings', icon: UserCheck, permission: 'settings' },
     { id: 'payment', label: 'Payment Settings', icon: FileText, permission: 'settings' },
+    { id: 'direct_income_offers', label: 'Income Offers', icon: Gift, permission: 'settings' },
     { id: 'after_launch_plan', label: 'After Launch Plan', icon: Rocket, permission: 'settings' },
     { id: 'spin_wheel', label: 'Spin Wheel', icon: Gift, permission: 'settings' },
     { id: 'earning', label: 'Earning Distribution', icon: TrendingUp, permission: 'mlm' }
@@ -659,6 +661,7 @@ const AdminDashboard: React.FC = () => {
 	                      {settingsTab === 'contact_footer' && hasPermission('settings' as any, 'read') && <ContactFooterSettings />}
 	                      {settingsTab === 'registration' && hasPermission('settings' as any, 'read') && <RegistrationSettings />}
 	                      {settingsTab === 'payment' && hasPermission('settings' as any, 'read') && <PaymentSettings />}
+	                      {settingsTab === 'direct_income_offers' && hasPermission('settings' as any, 'read') && <DirectIncomeOfferSettings />}
 	                      {settingsTab === 'after_launch_plan' && hasPermission('settings' as any, 'read') && <AfterLaunchPlanSettings />}
 	                      {settingsTab === 'spin_wheel' && hasPermission('settings' as any, 'read') && <SpinWheelManagement />}
 	                      {settingsTab === 'earning' && hasPermission('mlm' as any, 'read') && <EarningDistributionSettings />}

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { adminApi } from '../lib/adminApi';
 import { supabase } from '../lib/supabase';
 import { isLivePaymentModeValue } from '../utils/paymentMode';
+import { DirectIncomeOfferConfig, defaultDirectIncomeOfferConfig, normalizeDirectIncomeOfferConfig } from '../utils/directIncomeOffer';
 
 let inFlightAdminSettingsRequest: Promise<any[]> | null = null;
 
@@ -32,6 +33,7 @@ const PUBLIC_SYSTEM_SETTING_KEYS = [
   'social_whatsapp_url',
   'after_launch_plan_config',
   'home_autopool_popup_enabled',
+  'direct_income_offer_config',
   'launch_phase',
   'site_mode',
   'captcha_verification_enabled',
@@ -110,6 +112,7 @@ interface GeneralSettings {
   socialWhatsappUrl: string;
   afterLaunchPlanConfig?: any;
   homeAutopoolPopupEnabled: boolean;
+  directIncomeOfferConfig: DirectIncomeOfferConfig;
   autopoolUserCountsEnabled: boolean;
   launchPhase?: 'prelaunch' | 'launched';
   siteMode?: 'live' | 'development';
@@ -277,6 +280,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     socialWhatsappUrl: '',
     afterLaunchPlanConfig: null,
     homeAutopoolPopupEnabled: true,
+    directIncomeOfferConfig: defaultDirectIncomeOfferConfig,
     autopoolUserCountsEnabled: true,
     launchPhase: 'prelaunch',
     siteMode: 'live',
@@ -534,6 +538,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 break;
               case 'home_autopool_popup_enabled':
                 loadedSettings.homeAutopoolPopupEnabled = toBooleanSetting(value, true);
+                break;
+              case 'direct_income_offer_config':
+                loadedSettings.directIncomeOfferConfig = normalizeDirectIncomeOfferConfig(value);
                 break;
               case 'autopool_user_counts_enabled':
                 loadedSettings.autopoolUserCountsEnabled = toBooleanSetting(value, true);
