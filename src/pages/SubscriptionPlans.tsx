@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAdmin } from '../contexts/AdminContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Check, Star, Zap, DollarSign, ArrowRight, CheckCircle, Package, Calendar, Users, Shield, CreditCard, X } from 'lucide-react';
+import { Check, Star, Zap, DollarSign, ArrowRight, CheckCircle, Package, Calendar, Users, Shield, CreditCard, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SubscriptionPlan {
   tsp_id: string;
@@ -13,6 +13,7 @@ interface SubscriptionPlan {
   tsp_duration_days: number;
   tsp_features: any;
   tsp_is_active: boolean;
+  tsp_type?: 'registration' | 'upgrade' | null;
   tsp_plan_phase?: string | null;
   tsp_product_code?: string | null;
   tsp_created_at: string;
@@ -57,6 +58,7 @@ const SubscriptionPlans: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [checkingPlanId, setCheckingPlanId] = useState<string | null>(null);
   const [featuresPlan, setFeaturesPlan] = useState<SubscriptionPlan | null>(null);
+  const plansSliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadPlans();
@@ -72,11 +74,6 @@ const SubscriptionPlans: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-
-      if (launchPhase !== 'launched') {
-        setPlans([]);
-        return;
-      }
 
       const normalizeFeatures = (raw: any): string[] => {
         if (Array.isArray(raw)) return raw.map((v) => String(v));
@@ -105,7 +102,7 @@ const SubscriptionPlans: React.FC = () => {
         .from('tbl_subscription_plans')
         .select('*')
         .eq('tsp_is_active', true)
-        .eq('tsp_type', 'upgrade')
+        .or('tsp_type.eq.upgrade,tsp_product_code.eq.registration_5_spin')
         .order('tsp_price', { ascending: true });
 
       if (error) {
@@ -212,6 +209,14 @@ const SubscriptionPlans: React.FC = () => {
 
   const normalizeAmount = (value: number | null | undefined) => Number(Number(value || 0).toFixed(6));
   const isAutopool20Plan = (plan: SubscriptionPlan) => plan.tsp_product_code === 'autopool_20';
+  const isRegistrationPlan = (plan: SubscriptionPlan) => plan.tsp_type === 'registration' || plan.tsp_product_code === 'registration_5_spin';
+
+  const scrollPlans = (direction: 'previous' | 'next') => {
+    plansSliderRef.current?.scrollBy({
+      left: direction === 'next' ? 420 : -420,
+      behavior: 'smooth',
+    });
+  };
 
   const isActivePackageUsable = (pkg: ActivePackage) => {
     if (pkg.tus_end_date) {
@@ -269,6 +274,16 @@ const SubscriptionPlans: React.FC = () => {
 
   const handleSelectPlan = async (planId: string) => {
     const selectedPlan = plans.find(p => p.tsp_id === planId);
+
+    if (selectedPlan && isRegistrationPlan(selectedPlan)) {
+      if (user?.registrationPaid) {
+        alert('The 5 USDT registration plan is available only for new accounts. Your registration is already complete.');
+        return;
+      }
+
+      navigate(user ? '/registration-payment' : '/customer/register');
+      return;
+    }
 
     if (selectedPlan && hasActiveSamePackage(selectedPlan)) {
       alert('You already have an active package for this plan. You can renew it after the current package is exhausted.');
@@ -386,33 +401,35 @@ const SubscriptionPlans: React.FC = () => {
           </div>
         )}
 
-        {/* Plans Grid - Same format as admin panel */}
-        {(launchPhase !== 'launched') ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8 max-w-2xl mx-auto">
-            <div className="flex items-center space-x-3">
-              <div className="bg-yellow-100 p-2 rounded-lg">
-                <Package className="h-5 w-5 text-yellow-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-yellow-900">Plans Not Available Yet</h3>
-                <p className="text-yellow-800">Upgrade plans will be available after launch.</p>
+        {/* Payment plans slider */}
+        {plans.length > 0 ? (
+          <div className="relative max-w-[1600px] mx-auto">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <p className="text-sm font-medium text-gray-600">Swipe or use the arrows to view every payment plan.</p>
+              <div className="hidden sm:flex items-center gap-2">
+                <button type="button" onClick={() => scrollPlans('previous')} className="rounded-full border border-indigo-200 bg-white p-2 text-indigo-700 shadow-sm transition hover:bg-indigo-50" aria-label="Previous plans">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button type="button" onClick={() => scrollPlans('next')} className="rounded-full border border-indigo-200 bg-white p-2 text-indigo-700 shadow-sm transition hover:bg-indigo-50" aria-label="Next plans">
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
             </div>
-          </div>
-        ) : plans.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto items-stretch">
+            <div ref={plansSliderRef} className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-2 pb-6 pt-5 scroll-smooth [scrollbar-width:thin]">
             {plans.map((plan, index) => {
               const isAutopool20 = isAutopool20Plan(plan);
+              const registrationPlan = isRegistrationPlan(plan);
+              const isPopularPlan = plan.tsp_price === 50 && !isAutopool20 && !registrationPlan;
               const alreadyActive = hasActiveSamePackage(plan);
               const blockedByHigherPackage = hasHigherActivePackage(plan);
 
               return (
               <div
                 key={plan.tsp_id}
-                className={`bg-white rounded-2xl shadow-xl border-2 p-6 relative transform transition-all duration-300 ${
+                className={`min-w-[min(100%,360px)] sm:min-w-[360px] snap-start bg-white rounded-2xl shadow-xl border-2 p-6 relative transform transition-all duration-300 ${
                   alreadyActive || blockedByHigherPackage
                     ? 'border-emerald-300 opacity-75'
-                    : index === 1
+                    : isPopularPlan
                       ? 'border-indigo-500 ring-4 ring-indigo-200 hover:scale-105 hover:shadow-2xl'
                       : 'border-gray-200 hover:border-indigo-300 hover:scale-105 hover:shadow-2xl'
                 }`}
@@ -425,7 +442,14 @@ const SubscriptionPlans: React.FC = () => {
                       <span>{alreadyActive ? 'Active Package' : 'Lower Package'}</span>
                     </div>
                   </div>
-                ) : index === 1 && (
+                ) : registrationPlan ? (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-5 py-2 rounded-full text-sm font-bold flex items-center space-x-2 shadow-lg">
+                      <Star className="h-4 w-4" />
+                      <span>New Registration</span>
+                    </div>
+                  </div>
+                ) : isPopularPlan && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold flex items-center space-x-2 shadow-lg">
                       <Star className="h-4 w-4" />
@@ -455,7 +479,7 @@ const SubscriptionPlans: React.FC = () => {
                   
                   <div className="flex items-center justify-center space-x-2 text-gray-600">
                     <Calendar className="h-4 w-4" />
-                    <span>{isAutopool20 ? 'Eight-level matrix placement' : 'Up to 200 days earning window'}</span>
+                    <span>{registrationPlan ? 'One-time new-account registration' : isAutopool20 ? 'Eight-level matrix placement' : 'Up to 200 days earning window'}</span>
                   </div>
                   
                   <p className="text-gray-600 mt-3">{plan.tsp_description}</p>
@@ -494,8 +518,8 @@ const SubscriptionPlans: React.FC = () => {
                       <div className="text-xs text-gray-600">USDT Price</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-gray-900">{isAutopool20 ? '4×4' : '200'}</div>
-                      <div className="text-xs text-gray-600">{isAutopool20 ? 'Matrix structure' : 'Earning Days'}</div>
+                      <div className="text-lg font-bold text-gray-900">{registrationPlan ? 'One-time' : isAutopool20 ? '4×4' : '200'}</div>
+                      <div className="text-xs text-gray-600">{registrationPlan ? 'Registration' : isAutopool20 ? 'Matrix structure' : 'Earning Days'}</div>
                     </div>
                   </div>
                 </div>
@@ -507,7 +531,7 @@ const SubscriptionPlans: React.FC = () => {
                   className={`w-full py-4 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg ${
                     alreadyActive || blockedByHigherPackage || checkingPlanId === plan.tsp_id
                       ? 'cursor-not-allowed bg-emerald-100 text-emerald-800 shadow-none'
-                      : index === 1
+                      : isPopularPlan
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
                       : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white hover:from-gray-900 hover:to-black'
                   }`}
@@ -520,6 +544,10 @@ const SubscriptionPlans: React.FC = () => {
                       ? 'Already Active'
                       : blockedByHigherPackage
                       ? 'Lower Than Active Package'
+                      : registrationPlan
+                      ? user
+                        ? `Pay ${plan.tsp_price} USDT - Registration`
+                        : `Register for ${plan.tsp_price} USDT`
                       : user 
                       ? `Pay ${plan.tsp_price} USDT - Select Plan`
                       : `Select ${plan.tsp_name} - ${plan.tsp_price} USDT`
@@ -535,6 +563,8 @@ const SubscriptionPlans: React.FC = () => {
                       ? 'Renewal opens after this package is exhausted.'
                       : blockedByHigherPackage
                       ? 'Lower package purchases are blocked while a higher package is active.'
+                      : registrationPlan
+                      ? '✓ New account plan • ✓ One Spin Wheel eligibility • ✓ USDT payment'
                       : isAutopool20
                       ? '✓ Add-on eligible • ✓ Separate matrix • ✓ USDT payment'
                       : '✓ Instant activation • ✓ 24/7 support • ✓ USDT payments'}
@@ -543,6 +573,7 @@ const SubscriptionPlans: React.FC = () => {
               </div>
             );
             })}
+            </div>
           </div>
         ) : (
           <div className="text-center py-12">
