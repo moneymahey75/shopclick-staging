@@ -312,8 +312,7 @@ Deno.serve(async (req: Request) => {
     const { data: registrationPlan, error: planError } = await supabase
       .from('tbl_subscription_plans')
       .select('*')
-      .eq('tsp_type', 'registration')
-      .eq('tsp_plan_phase', 'prelaunch')
+      .eq('tsp_product_code', 'registration_5_spin')
       .eq('tsp_is_active', true)
       .maybeSingle();
 
@@ -333,10 +332,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const planPhase = String(registrationPlan.tsp_plan_phase || 'prelaunch').toLowerCase();
+    const isFiveSpinRegistration = registrationPlan.tsp_product_code === 'registration_5_spin';
     const { data: launchPhaseActiveData } = await supabase.rpc('is_launch_phase_active');
     const launchPhaseActive = launchPhaseActiveData === true;
     const usePrelaunchRewards = planPhase !== 'launch' && !launchPhaseActive;
-    const parentIncomeSetting = usePrelaunchRewards ? Number(registrationPlan.tsp_parent_income || 0) : 0;
+    const parentIncomeSetting = (usePrelaunchRewards || isFiveSpinRegistration)
+      ? Number(registrationPlan.tsp_parent_income || 0)
+      : 0;
     const normalizedParentIncome = Number.isFinite(parentIncomeSetting) && parentIncomeSetting > 0
       ? parentIncomeSetting
       : 0;
@@ -559,7 +561,7 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        if (!(await isSponsorLaunchEligible(supabase, sponsorUserId))) {
+        if (!isFiveSpinRegistration && !(await isSponsorLaunchEligible(supabase, sponsorUserId))) {
           await supabase
             .from('tbl_payments')
             .update({
@@ -677,7 +679,7 @@ Deno.serve(async (req: Request) => {
 
     // Parent A/C income + MLM level rewards
     const paymentAmount = expectedAmount;
-    const parentIncomeApplied = usePrelaunchRewards && sponsorUserId && normalizedParentIncome > 0
+    const parentIncomeApplied = (usePrelaunchRewards || isFiveSpinRegistration) && sponsorUserId && normalizedParentIncome > 0
       ? Math.min(normalizedParentIncome, expectedAmount)
       : 0;
     let adminNetAmount = expectedAmount;
@@ -736,7 +738,7 @@ Deno.serve(async (req: Request) => {
       })
       .eq('tu_id', userId);
 
-    if (usePrelaunchRewards && sponsorUserId) {
+    if ((usePrelaunchRewards || isFiveSpinRegistration) && sponsorUserId) {
         const walletCache = new Map<
           string,
           { walletId: string; baseBalance: number; baseReservedBalance: number; totalBalanceInserted: number; totalReservedInserted: number }
@@ -895,11 +897,11 @@ Deno.serve(async (req: Request) => {
 
         if (parentIncomeApplied > 0 && sponsorUserId) {
           const sponsorIsLaunchUser = await isLaunchPlanUser(sponsorUserId);
-          if (!sponsorIsLaunchUser) {
+          if (isFiveSpinRegistration || !sponsorIsLaunchUser) {
             const sponsorUpgraded = await hasActiveUpgrade(sponsorUserId);
             const refId = String(paymentId || txHash || sponsorUserId);
 
-            if (sponsorUpgraded) {
+            if (isFiveSpinRegistration || sponsorUpgraded) {
               await insertWalletTxIfMissing(
                 sponsorUserId,
                 'registration_parent_income',
@@ -933,7 +935,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        if (childSponsorshipNumber) {
+        if (!isFiveSpinRegistration && childSponsorshipNumber) {
           const { data: milestonesData, error: milestonesError } = await supabase
             .from('tbl_mlm_reward_milestones')
             .select('tmm_id, tmm_title, tmm_level1_required, tmm_level2_required, tmm_level3_required, tmm_reward_amount, tmm_is_active')

@@ -20,6 +20,7 @@ interface RegistrationPlan {
   tsp_duration_days?: number;
   tsp_features: any;
   tsp_parent_income?: number;
+  tsp_product_code?: string | null;
 }
 
 const PAYMENT_POLL_INTERVAL = 5000;
@@ -138,11 +139,6 @@ const RegistrationPayment: React.FC = () => {
       return;
     }
 
-    if (!settingsLoading && (settings.launchPhase || 'prelaunch') === 'launched') {
-      navigate('/subscription-plans', { replace: true });
-      return;
-    }
-
     if (user.hasActiveSubscription || user.registrationPaid) {
       // If we're already navigating to the success page, or there's a pending tx hash
       // in storage (auto-resume will handle it), don't redirect to dashboard.
@@ -165,7 +161,7 @@ const RegistrationPayment: React.FC = () => {
           supabase
             .from('tbl_subscription_plans')
             .select('*')
-            .eq('tsp_type', 'registration')
+            .eq('tsp_product_code', 'registration_5_spin')
             .eq('tsp_is_active', true)
             .maybeSingle()
             .then(({ data, error }) => {
