@@ -320,9 +320,11 @@ Deno.serve(async (req: Request) => {
 
         const sponsorIsVerified = sponsorUser ? sponsorMeetsVerificationRules(sponsorUser) : false;
 
-        if (!sponsorUser?.tu_is_active || !sponsorUser?.tu_registration_paid || !sponsorIsVerified) {
+        // The 5 USDT Spin registration is allowed under any active, verified
+        // parent. Other registration products still require a paid parent.
+        if (!sponsorUser?.tu_is_active || !sponsorIsVerified || (!isFiveSpinRegistration && !sponsorUser?.tu_registration_paid)) {
           return new Response(
-            JSON.stringify({ success: false, error: 'Parent A/C is not active/verified or registration-paid' }),
+            JSON.stringify({ success: false, error: isFiveSpinRegistration ? 'Parent A/C must be active and email or mobile verified' : 'Parent A/C is not active/verified or registration-paid' }),
             {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
